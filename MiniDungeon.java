@@ -75,4 +75,72 @@ class Game {
         }
     }
 
+private Room generateRandomRoom(int floorNum, int roomNum) {
+        int chance = rnd.nextInt(100);
+        if (chance < 60) {
+            List<Enemy> enemies = Enemy.randomEnemiesForFloor(floorNum);
+            return new Room("Sala " + roomNum + " (peligrosa)", "Una sala llena de enemigos.", enemies, null);
+        } else if (chance < 85) {
+            Item it = Item.randomItemForFloor(floorNum);
+            return new Room("Sala " + roomNum + " (brillante)", "Algo brilla en el suelo.", null, it);
+        } else {
+            return new Room("Sala " + roomNum + " (vacía)", "Una sala silenciosa y polvorienta.", null, null);
+        }
+    }
+
+    private void mainLoop() {
+        for (Floor floor : floors) {
+            System.out.println("\n--- Piso " + floor.floorNum + " ---");
+            for (Room room : floor.rooms) {
+                System.out.println("\nEntrando en " + room.name + ": " + room.description);
+                if (room.enemies != null) {
+                    combat(room.enemies);
+                    if (!player.isAlive()) {
+                        System.out.println("Has muerto... Fin del juego.");
+                        return;
+                    }
+                    if (rnd.nextInt(100) < 50) {
+                        Item drop = Item.randomItemForFloor(floor.floorNum);
+                        System.out.println("¡Has encontrado un objeto: " + drop.name + "!");
+                        player.inventory.add(drop);
+                    }
+                }
+                if (room.item != null) {
+                    System.out.println("¡Hay un objeto en la sala: " + room.item.name + "!");
+                    player.inventory.add(room.item);
+                }
+            }
+        }
+    }
+
+    private void combat(List<Enemy> enemies) {
+        System.out.println("Enemigos encontrados: " + enemies.size());
+        for (Enemy e : enemies) System.out.println("- " + e.name + " HP: " + e.hp);
+        while (!enemies.isEmpty() && player.isAlive()) {
+            System.out.println("\nTu turno:");
+            player.showStats();
+            System.out.println("1) Ataque básico  2) Usar habilidad  3) Usar objeto");
+            int choice = 1;
+            try { choice = Integer.parseInt(in.nextLine()); } catch(Exception e){}
+
+            if (choice == 1) {
+                Enemy target = enemies.get(0);
+                player.attack(target);
+                if (!target.isAlive()) {
+                    System.out.println(target.name + " ha sido derrotado.");
+                    enemies.remove(target);
+                }
+            } else if (choice == 2) {
+                player.useAbility(enemies);
+            } else if (choice == 3) {
+                player.useItem();
+            }
+
+            for (Enemy e : new ArrayList<>(enemies)) {
+                if (e.isAlive()) e.attack(player);
+                if (!player.isAlive()) break;
+            }
+        }
+    }
 }
+
