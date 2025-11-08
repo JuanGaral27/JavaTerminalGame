@@ -1,351 +1,259 @@
 import java.util.*;
-import java.util.function.Consumer;
 
+/* ======================= MAIN GAME ======================= */
 public class MiniDungeon {
     public static void main(String[] args) {
-        Game game = new Game();
-        game.start();
+        Scanner sc = new Scanner(System.in);
+        System.out.println("╔════════════════════════════════════════════╗");
+        System.out.println("║        El origen del humilde elda          ║");
+        System.out.println("╚════════════════════════════════════════════╝");
+        System.out.println("\n...En un pequeño pueblo rodeado de montañas...");
+        System.out.println("Vivía un joven huérfano, criado por una familia humilde que le enseñó el valor del esfuerzo.");
+        System.out.println("Desde pequeño soñó con dejar su nombre grabado en los libros del gremio de aventureros.");
+        System.out.println("Un día, con nada más que su determinación, decide partir hacia la ciudad de Lioren...");
+        System.out.println("\nPresiona ENTER para continuar...");
+        sc.nextLine();
+
+        System.out.println("Tras varios días de viaje, llegas ante las puertas del Gremio de Aventureros.");
+        System.out.println("Un hombre robusto con una cicatriz en el rostro te recibe.");
+        System.out.println("\n—Bienvenido, forastero. Antes de comenzar tu travesía, dime... ¿qué tipo de héroe deseas ser?");
+        System.out.println("\nElige tu clase:");
+        System.out.println("1. Guerrero ");
+        System.out.println("2. Mago ");
+        System.out.println("3. Caballero ");
+        System.out.println("4. Luchador ");
+        System.out.println("5. Invocador ");
+        System.out.println("6. Berserker ");
+        System.out.print("> ");
+
+        int choice = sc.nextInt();
+        sc.nextLine();
+
+        Player player = Player.createByClass(choice);
+
+        System.out.println("\n—Muy bien. Desde ahora serás conocido como el " + player.className + " del gremio.");
+        System.out.println("Que los dioses te acompañen en tu viaje, aventurero.");
+        System.out.println("\nPresiona ENTER para comenzar tu aventura...");
+        sc.nextLine();
+
+        GameLoop.start(player);
     }
 }
-class Game {
-    private final Scanner in = new Scanner(System.in);
-    private final Random rnd = new Random();
-    private Player player;
-    private List<Floor> floors;
-    private final int FLOORS = 3;
-    private final int ROOMS_PER_FLOOR = 5;
 
-    void start() {
-        showIntro();
-        chooseClass();
-        createWorld();
-        mainLoop();
-        System.out.println("\nGracias por jugar. ¡Hasta la próxima aventura!");
-    }
-
-    private void showIntro() {
-        System.out.println("=== MINI DUNGEON: ¡El Sombrero Parlante y los Pisos Perdidos! ===");
-        System.out.println("Eres un aventurero en busca del Sombrero Parlante.");
-        System.out.println("Pero antes de iniciar... debes elegir tu clase.\n");
-    }
-
-    private void chooseClass() {
-        System.out.println("Elige tu clase:");
-        System.out.println("1) Mago ");
-        System.out.println("2) Guerrero ");
-        System.out.println("3) Caballero ");
-        System.out.println("4) Asesino ");
-        System.out.println("5) Luchador ");
-        System.out.println("6) Invocador ");
-        System.out.println("7) Berserker ");
-
-        int choice;
-        while (true) {
-            System.out.print("Ingresa el número de tu elección: ");
-            try {
-                choice = Integer.parseInt(in.nextLine());
-                if (choice >= 1 && choice <= 7) break;
-            } catch (Exception e) {}
-            System.out.println("Opción inválida. Intenta de nuevo.");
-        }
-
-        String className = switch (choice) {
-            case 1 -> "Mago";
-            case 2 -> "Guerrero";
-            case 3 -> "Caballero";
-            case 4 -> "Asesino";
-            case 5 -> "Luchador";
-            case 6 -> "Invocador";
-            case 7 -> "Berserker";
-            default -> "Guerrero";
-        };
-        player = Player.createWithClass("Aventurero", className);
-        System.out.println("\nHas elegido la clase: " + className);
-        player.showStats();
-    }
-
-    private void createWorld() {
-        floors = new ArrayList<>();
-        for (int f = 1; f <= FLOORS; f++) {
-            Floor floor = new Floor(f);
-            for (int r = 1; r <= ROOMS_PER_FLOOR; r++) {
-                floor.addRoom(generateRandomRoom(f, r));
-            }
-            floors.add(floor);
-        }
-    }
-
-private Room generateRandomRoom(int floorNum, int roomNum) {
-        int chance = rnd.nextInt(100);
-        if (chance < 60) {
-            List<Enemy> enemies = Enemy.randomEnemiesForFloor(floorNum);
-            return new Room("Sala " + roomNum + " (peligrosa)", "Una sala llena de enemigos.", enemies, null);
-        } else if (chance < 85) {
-            Item it = Item.randomItemForFloor(floorNum);
-            return new Room("Sala " + roomNum + " (brillante)", "Algo brilla en el suelo.", null, it);
-        } else {
-            return new Room("Sala " + roomNum + " (vacía)", "Una sala silenciosa y polvorienta.", null, null);
-        }
-    }
-
-    private void mainLoop() {
-        for (Floor floor : floors) {
-            System.out.println("\n--- Piso " + floor.floorNum + " ---");
-            for (Room room : floor.rooms) {
-                System.out.println("\nEntrando en " + room.name + ": " + room.description);
-                if (room.enemies != null) {
-                    combat(room.enemies);
-                    if (!player.isAlive()) {
-                        System.out.println("Has muerto... Fin del juego.");
-                        return;
-                    }
-                    if (rnd.nextInt(100) < 50) {
-                        Item drop = Item.randomItemForFloor(floor.floorNum);
-                        System.out.println("¡Has encontrado un objeto: " + drop.name + "!");
-                        player.inventory.add(drop);
-                    }
-                }
-                if (room.item != null) {
-                    System.out.println("¡Hay un objeto en la sala: " + room.item.name + "!");
-                    player.inventory.add(room.item);
-                }
-            }
-        }
-    }
-
-    private void combat(List<Enemy> enemies) {
-        System.out.println("Enemigos encontrados: " + enemies.size());
-        for (Enemy e : enemies) System.out.println("- " + e.name + " HP: " + e.hp);
-        while (!enemies.isEmpty() && player.isAlive()) {
-            System.out.println("\nTu turno:");
-            player.showStats();
-            System.out.println("1) Ataque básico  2) Usar habilidad  3) Usar objeto");
-            int choice = 1;
-            try { choice = Integer.parseInt(in.nextLine()); } catch(Exception e){}
-
-            if (choice == 1) {
-                Enemy target = enemies.get(0);
-                player.attack(target);
-                if (!target.isAlive()) {
-                    System.out.println(target.name + " ha sido derrotado.");
-                    enemies.remove(target);
-                }
-            } else if (choice == 2) {
-                player.useAbility(enemies);
-            } else if (choice == 3) {
-                player.useItem();
-            }
-
-            for (Enemy e : new ArrayList<>(enemies)) {
-                if (e.isAlive()) e.attack(player);
-                if (!player.isAlive()) break;
-            }
-        }
-    }
-}
 class Player {
-    String name, playerClass;
-    int level, xp, xpToNext;
-    int hp, maxHp, mp, maxMp;
-    int atkFis, defFis, atkMag, defMag, velocidad;
+    String className;
+    int hp, maxHp, mp, maxMp, atkFis, defFis, atkMag, defMag, speed, gold = 0;
+    Random rnd = new Random();
+    List<Ability> abilities = new ArrayList<>();
 
-    List<Item> inventory = new ArrayList<>();
-    Weapon weapon = null;
-    Armor armor = null;
-    Boots boots = null;
-
-    Player(String name, String playerClass, int hp, int mp, int atkFis, int defFis, int atkMag, int defMag, int velocidad) {
-        this.name = name;
-        this.playerClass = playerClass;
-        this.level = 1;
-        this.xp = 0;
-        this.xpToNext = 50;
-        this.maxHp = hp; this.hp = hp;
-        this.maxMp = mp; this.mp = mp;
+    Player(String className, int hp, int mp, int atkFis, int defFis, int atkMag, int defMag, int speed) {
+        this.className = className;
+        this.hp = this.maxHp = hp;
+        this.mp = this.maxMp = mp;
         this.atkFis = atkFis;
         this.defFis = defFis;
         this.atkMag = atkMag;
         this.defMag = defMag;
-        this.velocidad = velocidad;
-        inventory.add(new Consumable("Poción Pequeña", "Restaura 15 HP", p -> p.heal(15)));
-        inventory.add(new Weapon("Espada Oxidada", 1, 3));
+        this.speed = speed;
     }
 
-    static Player createWithClass(String name, String className) {
-        return switch(className.toLowerCase()) {
-            case "mago" -> new Player(name,"Mago",60,50,4,6,15,10,5);
-            case "guerrero" -> new Player(name,"Guerrero",80,20,10,10,8,8,8);
-            case "caballero" -> new Player(name,"Caballero",100,10,7,15,4,12,9);
-            case "asesino" -> new Player(name,"Asesino",65,25,13,6,12,5,15);
-            case "luchador" -> new Player(name,"Luchador",120,10,18,15,0,5,7);
-            case "invocador" -> new Player(name,"Invocador",70,80,0,5,18,12,8);
-            case "berserker" -> new Player(name,"Berserker",90,25,16,8,4,4,18);
-            default -> new Player(name,"Guerrero",80,20,10,10,8,8,8);
-        };
+    static Player createByClass(int choice) {
+        Player p;
+        switch (choice) {
+            case 1 -> p = new Player("Guerrero", 120, 30, 20, 15, 5, 8, 10);
+            case 2 -> p = new Player("Mago", 80, 100, 5, 8, 25, 18, 10);
+            case 3 -> p = new Player("Caballero", 140, 40, 18, 20, 8, 12, 8);
+            case 4 -> p = new Player("Luchador", 160, 20, 25, 18, 0, 5, 12);
+            case 5 -> p = new Player("Invocador", 100, 120, 8, 10, 30, 15, 9);
+            case 6 -> p = new Player("Berserker", 130, 40, 28, 16, 5, 8, 14);
+            default -> p = new Player("Aventurero", 100, 50, 10, 10, 10, 10, 10);
+        }
+        p.loadAbilities();
+        return p;
+    }
+
+    void loadAbilities() {
+        switch (className) {
+            case "Guerrero" -> abilities.addAll(Arrays.asList(
+                new Ability("Corte Feroz", "Daño físico medio", 5, 1.5, 0),
+                new Ability("Defensa de Hierro", "Aumenta defensa física", 8, 0, 5),
+                new Ability("Embate Heroico", "Daño físico alto, gasta PM", 10, 2.0, 0),
+                new Ability("Grito de Guerra", "Aumenta ataque físico", 8, 0, 4)
+            ));
+            case "Mago" -> abilities.addAll(Arrays.asList(
+                new Ability("Bola de Fuego", "Daño mágico fuerte", 10, 0, 2.0),
+                new Ability("Rayo", "Daño mágico rápido", 8, 0, 1.5),
+                new Ability("Escudo Arcano", "Aumenta defensa mágica", 10, 0, 0),
+                new Ability("Sanación", "Cura HP", 12, 0, 0)
+            ));
+            case "Caballero" -> abilities.addAll(Arrays.asList(
+                new Ability("Corte Justo", "Ataque físico balanceado", 6, 1.2, 0),
+                new Ability("Muro Sagrado", "Aumenta todas las defensas", 10, 0, 0),
+                new Ability("Golpe de Honor", "Daño físico moderado", 8, 1.5, 0),
+                new Ability("Oración", "Recupera un poco de HP y MP", 12, 0, 0)
+            ));
+            case "Luchador" -> abilities.addAll(Arrays.asList(
+                new Ability("Puño Sangriento", "Usa vida para causar gran daño", 0, 2.5, 0, 15),
+                new Ability("Contraataque", "Devuelve parte del daño recibido", 5, 0, 0),
+                new Ability("Rugido del Alma", "Aumenta ataque físico", 8, 0, 0),
+                new Ability("Ultimo Aliento", "Gran golpe si HP < 30%", 5, 3.0, 0)
+            ));
+            case "Invocador" -> abilities.addAll(Arrays.asList(
+                new Ability("Invocar Dragón Bebé", "Ataque mágico fuerte", 15, 0, 2.5),
+                new Ability("Invocar Golem", "Aumenta defensa", 12, 0, 0),
+                new Ability("Invocar Serpiente Mística", "Ataque mágico medio", 10, 0, 2.0),
+                new Ability("Bendición de Espíritus", "Cura y aumenta ataque mágico", 15, 0, 0)
+            ));
+            case "Berserker" -> abilities.addAll(Arrays.asList(
+                new Ability("Furia", "Aumenta ataque, reduce defensa", 8, 0, 0, 10),
+                new Ability("Golpe Rabioso", "Daño alto, consume HP", 5, 3.0, 0, 10),
+                new Ability("Instinto Salvaje", "Duplica velocidad por 3 turnos", 8, 0, 0),
+                new Ability("Matanza", "Ataque físico extremo", 10, 3.5, 0, 15)
+            ));
+        }
     }
 
     void showStats() {
-        System.out.println("\n=== " + name + " - " + playerClass + " ===");
-        System.out.println("Nivel: " + level + " | XP: " + xp + "/" + xpToNext);
-        System.out.println("HP: " + hp + "/" + maxHp + " | MP: " + mp + "/" + maxMp);
-        System.out.println("AtkF: " + getAtkFis() + "  DefF: " + getDefFis() +
-                "  AtkM: " + getAtkMag() + "  DefM: " + getDefMag() + "  Vel: " + getVel());
-        System.out.println("Arma: " + (weapon!=null ? weapon.name : "Ninguna"));
-        System.out.println("Armadura: " + (armor!=null ? armor.name : "Ninguna"));
-        System.out.println("Botas: " + (boots!=null ? boots.name : "Ninguna"));
+        System.out.println("\n==== ESTADÍSTICAS DE " + className.toUpperCase() + " ====");
+        System.out.println("Vida: " + hp + "/" + maxHp);
+        System.out.println("Magia: " + mp + "/" + maxMp);
+        System.out.println("Ataque físico: " + atkFis);
+        System.out.println("Defensa física: " + defFis);
+        System.out.println("Ataque mágico: " + atkMag);
+        System.out.println("Defensa mágica: " + defMag);
+        System.out.println("Velocidad: " + speed);
+        System.out.println("Oro: " + gold + " monedas");
+        System.out.println("==============================\n");
+    }
+}
+
+class Ability {
+    String name, desc;
+    int mpCost;
+    double dmgFis, dmgMag;
+    int hpCost = 0;
+
+    Ability(String name, String desc, int mpCost, double dmgFis, double dmgMag) {
+        this.name = name; this.desc = desc; this.mpCost = mpCost;
+        this.dmgFis = dmgFis; this.dmgMag = dmgMag;
     }
 
-    void attack(Enemy enemy) {
-        Random rnd = new Random();
-        int dmg = Math.max(1,getAtkFis() - enemy.defFis/2);
-        if (rnd.nextInt(100)<15) dmg*=2; // crítico
-        enemy.takeDamage(dmg);
-        System.out.println("Atacas a " + enemy.name + " infligiendo " + dmg + " daño físico.");
-    }
-
-    void heal(int amount) {
-        hp = Math.min(maxHp, hp + amount);
-        System.out.println("Te curas " + amount + " HP. Ahora: " + hp + "/" + maxHp);
-    }
-
-    boolean isAlive() { return hp > 0; }
-
-    int getAtkFis() { return atkFis + (weapon!=null?weapon.atkBonus:0); }
-    int getDefFis() { return defFis + (armor!=null?armor.defBonus:0); }
-    int getAtkMag() { return atkMag; }
-    int getDefMag() { return defMag; }
-    int getVel() { return velocidad + (boots!=null?boots.speedBonus:0); }
-
-    void useAbility(List<Enemy> enemies) {
-        if (mp>=10) {
-            Enemy target = enemies.get(0);
-            int dmg = atkMag*2;
-            target.takeDamage(dmg);
-            mp -=10;
-            System.out.println("Infliges " + dmg + " de daño mágico a " + target.name);
-            if (!target.isAlive()) { System.out.println(target.name + " ha sido derrotado."); enemies.remove(target); }
-        } else {
-            System.out.println("No tienes suficiente MP.");
-        }
-    }
-
-    void useItem() {
-        if (inventory.isEmpty()) { System.out.println("No tienes items."); return; }
-        System.out.println("Items:");
-        for (int i=0;i<inventory.size();i++) System.out.println((i+1)+") "+inventory.get(i).name);
-        Scanner in = new Scanner(System.in);
-        int choice=1;
-        try{ choice=Integer.parseInt(in.nextLine())-1;}catch(Exception e){}
-        if (choice>=0 && choice<inventory.size()) {
-            Item it = inventory.get(choice);
-            it.use(this);
-            inventory.remove(it);
-        }
+    Ability(String name, String desc, int mpCost, double dmgFis, double dmgMag, int hpCost) {
+        this(name, desc, mpCost, dmgFis, dmgMag);
+        this.hpCost = hpCost;
     }
 }
 
 class Enemy {
     String name;
-    int hp, maxHp, atkFis, defFis, atkMag, defMag, velocidad, mp, maxMp;
-    Random rnd = new Random();
+    int hp, atkFis, defFis, atkMag, defMag, velocidad;
 
-    Enemy(String name,int hp,int mp,int atkFis,int defFis,int atkMag,int defMag,int velocidad){
-        this.name=name; this.hp=hp; this.maxHp=hp; this.mp=mp; this.maxMp=mp;
-        this.atkFis=atkFis; this.defFis=defFis; this.atkMag=atkMag; this.defMag=defMag;
-        this.velocidad=velocidad;
+    Enemy(String name, int hp, int atkFis, int defFis, int atkMag, int defMag, int velocidad) {
+        this.name = name;
+        this.hp = hp;
+        this.atkFis = atkFis;
+        this.defFis = defFis;
+        this.atkMag = atkMag;
+        this.defMag = defMag;
+        this.velocidad = velocidad;
     }
 
-    void attack(Player player){
-        if(mp>=5 && atkMag>0 && rnd.nextInt(100)<40){ // 40% de usar habilidad mágica si tiene MP
-            int dmg = Math.max(1, atkMag - player.defMag/2);
-            player.hp -= dmg;
-            mp -=5;
-            System.out.println(name + " usa habilidad mágica e inflige " + dmg + " daño mágico!");
-        } else {
-            int dmg = Math.max(1, atkFis - player.getDefFis()/2);
-            player.hp -= dmg;
-            System.out.println(name + " ataca físicamente e inflige " + dmg + " daño.");
-        }
-    }
-
-    boolean isAlive(){ return hp>0; }
-    void takeDamage(int d){ hp-=d; if(hp<0) hp=0; }
-
-    static List<Enemy> randomEnemiesForFloor(int floor){
-        List<Enemy> enemies = new ArrayList<>();
+    static List<Enemy> randomEnemies(int floor) {
         Random rnd = new Random();
-        int horda = 1 + rnd.nextInt(floor+1); // Oleadas
-        for(int i=0;i<horda;i++){
-            int tipo = rnd.nextInt(10);
-            switch(tipo){
-                case 0 -> enemies.add(new Enemy("Flor monstruosa",30+floor*5,10,6+floor,2+floor,0,2,5+floor));
-                case 1 -> enemies.add(new Enemy("Serpiente gigante",25+floor*5,15,7+floor,1+floor,4,2,6+floor));
-                case 2 -> enemies.add(new Enemy("Golem",50+floor*5,0,10+floor,6+floor,0,4,3+floor));
-                case 3 -> enemies.add(new Enemy("Ciclope",45+floor*5,10,9+floor,4+floor,2,3,4+floor));
-                case 4 -> enemies.add(new Enemy("Esqueleto arquero",30+floor*5,5,8+floor,2+floor,0,1,8+floor));
-                case 5 -> enemies.add(new Enemy("Gargola poseída",35+floor*5,15,7+floor,5+floor,3,4,6+floor));
-                case 6 -> enemies.add(new Enemy("Pejelagarto",28+floor*5,5,6+floor,3+floor,0,2,7+floor));
-                case 7 -> enemies.add(new Enemy("Esqueleto caballero",40+floor*5,0,9+floor,6+floor,0,2,4+floor));
-                case 8 -> enemies.add(new Enemy("No-muerto arcanista",25+floor*5,20,3+floor,2+floor,8+floor,5+floor,5+floor));
-                default -> enemies.add(new Enemy("Peruanos guerreros",20+floor*5,5,5+floor,2+floor,0,1,10+floor));
+        int cantidad = 1 + rnd.nextInt(1 + floor / 2);
+        List<Enemy> list = new ArrayList<>();
+        for (int i = 0; i < cantidad; i++) {
+            int tipo = rnd.nextInt(6);
+            switch (tipo) {
+                case 0 -> list.add(new Enemy("Flor Monstruosa", 80 + floor * 10, 15 + floor, 10 + floor, 5 + floor, 8 + floor, 8 + floor));
+                case 1 -> list.add(new Enemy("Serpiente Gigante", 100 + floor * 12, 18 + floor, 12 + floor, 8 + floor, 6 + floor, 10 + floor));
+                case 2 -> list.add(new Enemy("Esqueleto Guerrero", 90 + floor * 11, 20 + floor, 14 + floor, 0, 4 + floor, 7 + floor));
+                case 3 -> list.add(new Enemy("Gárgola Poseída", 120 + floor * 14, 22 + floor, 15 + floor, 12 + floor, 10 + floor, 9 + floor));
+                case 4 -> list.add(new Enemy("Pejelagarto", 110 + floor * 13, 19 + floor, 13 + floor, 5 + floor, 6 + floor, 10 + floor));
+                default -> list.add(new Enemy("Peruano Aventurero", 130 + floor * 15, 25 + floor, 14 + floor, 10 + floor, 10 + floor, 12 + floor));
             }
         }
-        return enemies;
+        return list;
     }
 }
 
-class Floor{
-    int floorNum;
-    List<Room> rooms = new ArrayList<>();
-    Floor(int num){ floorNum=num; }
-    void addRoom(Room r){ rooms.add(r);}
-}
+class GameLoop {
+    static void start(Player player) {
+        Scanner sc = new Scanner(System.in);
+        int floor = 1;
 
-class Room{
-    String name, description;
-    List<Enemy> enemies;
-    Item item;
-    Room(String n,String d,List<Enemy> enemies,Item item){ name=n; description=d; this.enemies=enemies; this.item=item;}
-}
+        while (player.hp > 0) {
+            System.out.println("\n══════════════════════════════════════");
+            System.out.println("🌙 PISO " + floor + " – Un nuevo desafío...");
+            System.out.println("══════════════════════════════════════");
+            List<Enemy> enemies = Enemy.randomEnemies(floor);
 
-abstract class Item{
-    String name;
-    Item(String n){ name=n; }
-    abstract void use(Player player);
+            System.out.println("Enemigos encontrados:");
+            for (Enemy e : enemies)
+                System.out.println("- " + e.name + " (HP: " + e.hp + ")");
 
-    static Item randomItemForFloor(int floor){
-        Random rnd = new Random();
-        int tipo = rnd.nextInt(3);
-        return switch(tipo){
-            case 0 -> new Weapon("Espada "+floor,floor,5+floor);
-            case 1 -> new Armor("Armadura "+floor,floor);
-            default -> new Consumable("Poción","Restaura 20 HP", p->p.heal(20));
-        };
+            System.out.println("\nPresiona ENTER para luchar...");
+            sc.nextLine();
+
+            for (Enemy e : enemies) {
+                while (e.hp > 0 && player.hp > 0) {
+                    System.out.println("\nTu HP: " + player.hp + "/" + player.maxHp + " | MP: " + player.mp + "/" + player.maxMp);
+                    System.out.println("Enemigo: " + e.name + " (" + e.hp + " HP)");
+                    System.out.println("1. Ataque básico");
+                    System.out.println("2. Usar habilidad");
+                    System.out.print("> ");
+                    int action = sc.nextInt();
+                    sc.nextLine();
+
+                    if (action == 1) {
+                        int dmg = Math.max(1, player.atkFis - e.defFis / 2);
+                        e.hp -= dmg;
+                        System.out.println("Atacas con tu arma e infliges " + dmg + " de daño.");
+                    } else {
+                        for (int i = 0; i < player.abilities.size(); i++) {
+                            Ability a = player.abilities.get(i);
+                            System.out.println((i + 1) + ". " + a.name + " (" + a.desc + ")");
+                        }
+                        System.out.print("> ");
+                        int ab = sc.nextInt() - 1;
+                        sc.nextLine();
+                        if (ab >= 0 && ab < player.abilities.size()) {
+                            Ability a = player.abilities.get(ab);
+                            if (player.mp >= a.mpCost) {
+                                player.mp -= a.mpCost;
+                                if (a.hpCost > 0) player.hp -= a.hpCost;
+                                int dmg = (int) ((player.atkFis * a.dmgFis) + (player.atkMag * a.dmgMag));
+                                e.hp -= dmg;
+                                System.out.println("Usas " + a.name + " e infliges " + dmg + " de daño!");
+                            } else {
+                                System.out.println("No tienes suficiente MP!");
+                            }
+                        }
+                    }
+
+                    if (e.hp <= 0) {
+                        System.out.println(e.name + " ha sido derrotado!");
+                        player.gold += 15 + floor * 5;
+                        break;
+                    }
+
+                    int edmg = Math.max(1, e.atkFis - player.defFis / 2);
+                    player.hp -= edmg;
+                    System.out.println(e.name + " te ataca e inflige " + edmg + " de daño.");
+                }
+                if (player.hp <= 0) break;
+            }
+
+            if (player.hp <= 0) {
+                System.out.println("\nHas caído en combate...");
+                System.out.println("Tu nombre será recordado entre los héroes caídos...");
+                break;
+            }
+
+            floor++;
+            player.showStats();
+            System.out.println("¿Continuar al siguiente piso? (s/n)");
+            if (!sc.nextLine().toLowerCase().equals("s")) break;
+        }
     }
 }
-
-class Weapon extends Item{
-    int atkBonus, bonusStat;
-    Weapon(String n,int bonusAtk,int bonusStat){ super(n); atkBonus=bonusAtk; this.bonusStat=bonusStat; }
-    void use(Player p){ System.out.println("Equipas " + name); p.weapon=this;}
-}
-
-class Armor extends Item{
-    int defBonus;
-    Armor(String n,int def){ super(n); defBonus=def; }
-    void use(Player p){ System.out.println("Equipas " + name); p.armor=this;}
-}
-
-class Boots extends Item{
-    int speedBonus;
-    Boots(String n,int speed){ super(n); speedBonus=speed; }
-    void use(Player p){ System.out.println("Equipas " + name); p.boots=this;}
-}
-
-class Consumable extends Item{
-    String desc;
-    Consumer<Player> effect;
-    Consumable(String n,String d, Consumer<Player> e){ super(n); desc=d; effect=e;}
-    void use(Player p){ effect.accept(p); System.out.println("Usas " + name);}
-}
-
