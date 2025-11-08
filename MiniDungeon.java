@@ -293,3 +293,59 @@ class Enemy {
         return enemies;
     }
 }
+
+class Floor{
+    int floorNum;
+    List<Room> rooms = new ArrayList<>();
+    Floor(int num){ floorNum=num; }
+    void addRoom(Room r){ rooms.add(r);}
+}
+
+class Room{
+    String name, description;
+    List<Enemy> enemies;
+    Item item;
+    Room(String n,String d,List<Enemy> enemies,Item item){ name=n; description=d; this.enemies=enemies; this.item=item;}
+}
+
+abstract class Item{
+    String name;
+    Item(String n){ name=n; }
+    abstract void use(Player player);
+
+    static Item randomItemForFloor(int floor){
+        Random rnd = new Random();
+        int tipo = rnd.nextInt(3);
+        return switch(tipo){
+            case 0 -> new Weapon("Espada "+floor,floor,5+floor);
+            case 1 -> new Armor("Armadura "+floor,floor);
+            default -> new Consumable("Poción","Restaura 20 HP", p->p.heal(20));
+        };
+    }
+}
+
+class Weapon extends Item{
+    int atkBonus, bonusStat;
+    Weapon(String n,int bonusAtk,int bonusStat){ super(n); atkBonus=bonusAtk; this.bonusStat=bonusStat; }
+    void use(Player p){ System.out.println("Equipas " + name); p.weapon=this;}
+}
+
+class Armor extends Item{
+    int defBonus;
+    Armor(String n,int def){ super(n); defBonus=def; }
+    void use(Player p){ System.out.println("Equipas " + name); p.armor=this;}
+}
+
+class Boots extends Item{
+    int speedBonus;
+    Boots(String n,int speed){ super(n); speedBonus=speed; }
+    void use(Player p){ System.out.println("Equipas " + name); p.boots=this;}
+}
+
+class Consumable extends Item{
+    String desc;
+    Consumer<Player> effect;
+    Consumable(String n,String d, Consumer<Player> e){ super(n); desc=d; effect=e;}
+    void use(Player p){ effect.accept(p); System.out.println("Usas " + name);}
+}
+
